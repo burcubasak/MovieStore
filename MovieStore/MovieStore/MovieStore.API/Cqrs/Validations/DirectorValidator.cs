@@ -2,11 +2,11 @@
 using MovieStore.MovieStore.Schema;
 using System;
 
-namespace MovieStore.MovieStore.API.Cqrs.DirectorImpl.Validations 
+namespace MovieStore.MovieStore.API.Cqrs.Validations 
 {
-    public class DirectorRequestValidator : AbstractValidator<DirectorRequest>
+    public class DirectorValidator : AbstractValidator<DirectorRequest>
     {
-        public DirectorRequestValidator()
+        public DirectorValidator()
         {
             RuleFor(director => director.Name)
                 .NotEmpty().WithMessage("Director's name cannot be empty.")

@@ -1,8 +1,11 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using MovieStore.MovieStore.API.Cqrs.MovieImpl.Commands.Actors;
-using MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.Actors; // ActorIdByQuery için using
-using MovieStore.MovieStore.Schema; // ActorResponse için (varsayım)
+using MovieStore.MovieStore.API.Cqrs.MovieImpl.Commands.Actors; 
+using MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.Actors;  
+using MovieStore.MovieStore.Schema;                           
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries;
 
 namespace MovieStore.MovieStore.API.Controllers
 {
@@ -13,69 +16,105 @@ namespace MovieStore.MovieStore.API.Controllers
         private readonly IMediator _mediator;
         public ActorController(IMediator mediator)
         {
-            _mediator = mediator;
+            _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         }
-
         [HttpGet]
-        public async Task<IActionResult> GetAllActor([FromQuery] GetAllActorQuery query)
+        [ProducesResponseType(typeof(IEnumerable<ActorResponse>), 200)]
+        public async Task<IActionResult> GetAllActors(CancellationToken cancellationToken)
         {
-            var result = await _mediator.Send(query);
+            var query = new GetAllActorQuery();
+            var result = await _mediator.Send(query, cancellationToken);
             return Ok(result);
         }
-
-        // Bu metodun adını CreatedAtAction'da kullanacağız
-        [HttpGet("{id:guid}", Name = "GetActorById")] // Name özelliği eklemek iyi bir pratiktir, ancak nameof da çalışır
-        public async Task<IActionResult> GetById(Guid id)
+        [HttpGet("{id:guid}", Name = "GetActorById")]
+        [ProducesResponseType(typeof(ActorResponse), 200)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> GetActorById(Guid id, CancellationToken cancellationToken)
         {
-            // ActorIdByQuery query sınıfınızın adıyla eşleşiyor, bu doğru.
             var query = new ActorIdByQuery(id);
-            var result = await _mediator.Send(query);
-            if (result == null) // Varsayım: result null ise NotFound dön
+            var result = await _mediator.Send(query, cancellationToken);
+            if (result == null)
             {
-                return NotFound();
+                return NotFound(new { message = $"Actor with ID {id} not found." });
             }
             return Ok(result);
         }
-
         [HttpPost]
-        public async Task<IActionResult> CreateActor([FromBody] CreateActorCommand command)
+        [ProducesResponseType(typeof(ActorResponse), 201)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), 400)]
+        [ProducesResponseType(typeof(ProblemDetails), 409)] 
+        public async Task<IActionResult> CreateActor([FromBody] ActorRequest request, CancellationToken cancellationToken)
         {
-            // Varsayalım ki command handler'ınız ActorResponse veya benzeri bir Id içeren nesne döndürüyor.
-            var result = await _mediator.Send(command);
-
-            // DÜZELTME: nameof(GetById) kullanılmalı
-            // result.Id'nin yeni oluşturulan aktörün Guid ID'si olduğunu varsayıyoruz.
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            if (!ModelState.IsValid) 
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var command = new CreateActorCommand(request);
+                var result = await _mediator.Send(command, cancellationToken);
+                return CreatedAtAction(nameof(GetActorById), new { id = result.Id }, result);
+            }
+            catch (InvalidOperationException ex) 
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
-
-        [HttpPut("{id:guid}")] // Rota parametresine :guid eklemek iyi bir pratiktir
-        public async Task<IActionResult> UpdateActor([FromRoute] Guid id, [FromBody] UpdateActorCommand command)
+        [HttpPut("{id:guid}")]
+        [ProducesResponseType(typeof(ActorResponse), 200)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), 400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(typeof(ProblemDetails), 409)] 
+        public async Task<IActionResult> UpdateActor(Guid id, [FromBody] ActorRequest request, CancellationToken cancellationToken)
         {
-            // ID'nin command içindekiyle eşleştiğini kontrol etmek iyi bir pratiktir.
-            // Command nesnenizin bir Id özelliği olduğunu varsayıyorum.
-            if (id != command.Id)
+            if (!ModelState.IsValid)
             {
-                return BadRequest("ID in URL does not match ID in request body.");
+                return BadRequest(ModelState);
             }
-            var result = await _mediator.Send(command);
-            if (result == null) // Varsayım: Güncelleme başarısızsa veya kaynak bulunamadıysa
+            try
             {
-                return NotFound();
+                var command = new UpdateActorCommand(id, request);
+                var result = await _mediator.Send(command, cancellationToken);
+                return Ok(result);
             }
-            return Ok(result); // Veya NoContent() eğer bir şey döndürmek istemiyorsanız
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex) 
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
-
-        [HttpDelete("{id:guid}")] // Rota parametresine :guid eklemek iyi bir pratiktir
-        public async Task<IActionResult> DeleteActor([FromRoute] Guid id) // DeleteActorCommand'ı body'den almak yerine ID'yi kullanmak daha yaygındır
+        [HttpDelete("{id:guid}")]
+        [ProducesResponseType(typeof(ActorResponse), 200)]
+        [ProducesResponseType(typeof(ProblemDetails), 400)] 
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> DeleteActor(Guid id, CancellationToken cancellationToken)
         {
-            var command = new DeleteActorCommand(id); // Command'ı burada oluşturun
-            var result = await _mediator.Send(command);
-            if (result == null) // Varsayım: Silme başarısızsa veya kaynak bulunamadıysa
+            try
             {
-                return NotFound();
+                var command = new DeleteActorCommand(id);
+                var result = await _mediator.Send(command, cancellationToken);
+                return Ok(result);
             }
-            return Ok(result); // Veya NoContent()
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
-
+        [HttpGet("{actorId:guid}/movies")]
+        [ProducesResponseType(typeof(IEnumerable<MovieResponse>), 200)]
+        [ProducesResponseType(404)] 
+        public async Task<ActionResult<IEnumerable<MovieResponse>>> GetMoviesForActor(Guid actorId, CancellationToken cancellationToken)
+        {
+            var query = new GetActiveMoviesForActorQuery(actorId);
+            var movies = await _mediator.Send(query, cancellationToken);
+            return Ok(movies);
+        }
     }
 }

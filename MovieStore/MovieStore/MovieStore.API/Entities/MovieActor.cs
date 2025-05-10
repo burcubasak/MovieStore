@@ -23,11 +23,11 @@ namespace MovieStore.MovieStore.API.Entities
             builder.HasOne(ma => ma.Movie)
                 .WithMany(m => m.MovieActors)
                 .HasForeignKey(ma => ma.MovieId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
             builder.HasOne(ma => ma.Actor)
                 .WithMany(a => a.MovieActors)
                 .HasForeignKey(ma => ma.ActorId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

@@ -25,7 +25,7 @@ namespace MovieStore.MovieStore.API.Entities
             builder.HasMany(d => d.Movies)
                 .WithOne(m => m.Director)
                 .HasForeignKey(m => m.DirectorId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

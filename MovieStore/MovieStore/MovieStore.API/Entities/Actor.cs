@@ -32,7 +32,7 @@ namespace MovieStore.MovieStore.API.Entities
             builder.HasMany(a => a.MovieActors)
                    .WithOne(ma => ma.Actor)
                    .HasForeignKey(ma => ma.ActorId)
-                   .OnDelete(DeleteBehavior.Cascade);
+                   .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasMany(a => a.Movies)
                    .WithMany(m => m.Actors)

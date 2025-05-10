@@ -7,6 +7,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="MovieStore.API\Cqrs\Actor\**" />
+    <Compile Remove="MovieStore.API\Cqrs\Customer\**" />
+    <Compile Remove="MovieStore.API\Cqrs\Director\**" />
+    <Content Remove="MovieStore.API\Cqrs\Actor\**" />
+    <Content Remove="MovieStore.API\Cqrs\Customer\**" />
+    <Content Remove="MovieStore.API\Cqrs\Director\**" />
+    <EmbeddedResource Remove="MovieStore.API\Cqrs\Actor\**" />
+    <EmbeddedResource Remove="MovieStore.API\Cqrs\Customer\**" />
+    <EmbeddedResource Remove="MovieStore.API\Cqrs\Director\**" />
+    <None Remove="MovieStore.API\Cqrs\Actor\**" />
+    <None Remove="MovieStore.API\Cqrs\Customer\**" />
+    <None Remove="MovieStore.API\Cqrs\Director\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AutoMapper" Version="13.0.1" /> 
 		<PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" /> 
 			<PackageReference Include="MediatR" Version="12.2.0" /> 
@@ -21,9 +36,6 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" /> </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="MovieStore.API\Cqrs\Customer\" />
-    <Folder Include="MovieStore.API\Cqrs\Actor\" />
-    <Folder Include="MovieStore.API\Cqrs\Director\" />
     <Folder Include="MovieStore.API\Cqrs\Order\" />
   </ItemGroup>
 

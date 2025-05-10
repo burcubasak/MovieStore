@@ -1,10 +1,14 @@
-﻿using AutoMapper;
-using FluentValidation;
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using MovieStore.MovieStore.API.DbContexts;
-using MovieStore.MovieStore.Schema;
+using MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries;      
+using MovieStore.MovieStore.Schema;                            
+using System;
+using System.Collections.Generic;
+using System.Threading; // CancellationToken için
+using System.Threading.Tasks;
+using MovieStore.MovieStore.API.Cqrs.MovieImpl.Commands.Movies;
+using MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.Movies;
+using static MovieStore.MovieStore.API.Cqrs.MovieImpl.Commands.MovieActors.MovieActorCommand;
 
 namespace MovieStore.MovieStore.API.Controllers
 {
@@ -12,89 +16,155 @@ namespace MovieStore.MovieStore.API.Controllers
     [ApiController]
     public class MovieController : ControllerBase
     {
-        private readonly AppDbContext _dbContext;
-        private readonly IMapper _mapper;
-        private readonly IValidator<MovieRequest> _createValidator;
-        private readonly IValidator<MovieRequest> _updateValidator;
+        private readonly IMediator _mediator;
 
-        public MovieController(AppDbContext dbContext, IMapper mapper, IValidator<MovieRequest> createValidator, IValidator<MovieRequest> updateValidator)
+        public MovieController(IMediator mediator)
         {
-            _dbContext = dbContext;
-            _mapper = mapper;
-            _createValidator = createValidator;
-            _updateValidator = updateValidator;
+            _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         }
-
         [HttpPost]
+        [ProducesResponseType(typeof(MovieResponse), 201)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), 400)]
+        [ProducesResponseType(typeof(ProblemDetails), 409)] 
         public async Task<IActionResult> CreateMovie([FromBody] MovieRequest request, CancellationToken cancellationToken)
         {
-            var validationResult = _createValidator.Validate(request);
-            if (!validationResult.IsValid)
+            if (!ModelState.IsValid) 
             {
-                return BadRequest(validationResult.Errors);
+                return BadRequest(ModelState);
             }
-
-            var newMovie = _mapper.Map<Entities.Movie>(request);
-            await _dbContext.Movies.AddAsync(newMovie, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            return CreatedAtAction(nameof(GetMovieById), new { id = newMovie.Id }, _mapper.Map<MovieResponse>(newMovie));
+            try
+            {
+                var command = new CreateMovieCommand(request);
+                var movieResponse = await _mediator.Send(command, cancellationToken);
+                return CreatedAtAction(nameof(GetMovieById), new { id = movieResponse.Id }, movieResponse);
+            }
+            catch (InvalidOperationException ex) 
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
-
-        [HttpGet("{id}")]
+        [HttpGet("{id:guid}", Name = "GetMovieById")]
+        [ProducesResponseType(typeof(MovieResponse), 200)]
+        [ProducesResponseType(404)]
         public async Task<IActionResult> GetMovieById(Guid id, CancellationToken cancellationToken)
         {
-            var movie = await _dbContext.Movies.FindAsync(new object[] { id }, cancellationToken);
+            var query = new MovieIdByQuery(id);
+            var movie = await _mediator.Send(query, cancellationToken);
             if (movie == null)
             {
-                return NotFound($"Movie with ID {id} not found.");
+                return NotFound(new { message = $"Movie with ID {id} not found." });
             }
-
-            return Ok(_mapper.Map<MovieResponse>(movie));
+            return Ok(movie);
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<MovieResponse>), 200)]
         public async Task<IActionResult> GetAllMovies(CancellationToken cancellationToken)
         {
-            var movies = await _dbContext.Movies.ToListAsync(cancellationToken);
-            return Ok(_mapper.Map<List<MovieResponse>>(movies));
+            var query = new GetAllMovieQuery();
+            var movies = await _mediator.Send(query, cancellationToken);
+            return Ok(movies);
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("{id:guid}")]
+        [ProducesResponseType(typeof(MovieResponse), 200)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), 400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(typeof(ProblemDetails), 409)] 
         public async Task<IActionResult> UpdateMovie(Guid id, [FromBody] MovieRequest request, CancellationToken cancellationToken)
         {
-            var validationResult = _updateValidator.Validate(request);
-            if (!validationResult.IsValid)
+            if (!ModelState.IsValid)
             {
-                return BadRequest(validationResult.Errors);
+                return BadRequest(ModelState);
             }
-
-            var movie = await _dbContext.Movies.FindAsync(new object[] { id }, cancellationToken);
-            if (movie == null)
+            try
             {
-                return NotFound($"Movie with ID {id} not found.");
+                var command = new UpdateMovieCommand(id, request);
+                var updatedMovie = await _mediator.Send(command, cancellationToken);
+                return Ok(updatedMovie);
             }
-
-            _mapper.Map(request, movie);
-            _dbContext.Movies.Update(movie);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            return NoContent();
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
-
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:guid}")]
+        [ProducesResponseType(typeof(MovieResponse), 200)]
+        [ProducesResponseType(typeof(ProblemDetails), 400)] 
+        [ProducesResponseType(404)]
         public async Task<IActionResult> DeleteMovie(Guid id, CancellationToken cancellationToken)
         {
-            var movie = await _dbContext.Movies.FindAsync(new object[] { id }, cancellationToken);
-            if (movie == null)
+            try
             {
-                return NotFound($"Movie with ID {id} not found.");
+                var command = new DeleteMovieCommand(id);
+                var result = await _mediator.Send(command, cancellationToken);
+                return Ok(result);
             }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex) 
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        [HttpPost("{movieId:guid}/actors")]
+        [ProducesResponseType(typeof(MovieActorStatusResponse), 201)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), 400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(typeof(ProblemDetails), 409)] 
+        public async Task<ActionResult<MovieActorStatusResponse>> AssignActorToMovie(Guid movieId, [FromBody] AssignActorToMovieRequest request, CancellationToken cancellationToken)
+        {
+            if (!ModelState.IsValid) 
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var command = new LinkActorToMovieCommand(movieId, request.ActorId);
+                var result = await _mediator.Send(command, cancellationToken);
+                return StatusCode(201, result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+        }
+        [HttpDelete("{movieId:guid}/actors/{actorId:guid}")]
+        [ProducesResponseType(204)] 
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> RemoveActorFromMovie(Guid movieId, Guid actorId, [FromQuery] bool hardDelete = false, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var command = new UnlinkActorFromMovieCommand(movieId, actorId, hardDelete);
+                await _mediator.Send(command, cancellationToken);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
 
-            _dbContext.Movies.Remove(movie);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+        [HttpGet("{movieId:guid}/actors")]
+        [ProducesResponseType(typeof(IEnumerable<ActorResponse>), 200)]
+        [ProducesResponseType(404)] 
+        public async Task<ActionResult<IEnumerable<ActorResponse>>> GetActorsForMovie(Guid movieId, CancellationToken cancellationToken)
+        {
 
-            return NoContent();
+            var query = new GetActiveActorsForMovieQuery(movieId);
+            var actors = await _mediator.Send(query, cancellationToken);
+            return Ok(actors); 
         }
     }
 }

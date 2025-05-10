@@ -8,6 +8,8 @@ using MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.Movies; // MovieQueryHand
 using MovieStore.MovieStore.API.Cqrs.Validations; // ActorValidator, MovieValidator için
 using MovieStore.MovieStore.API.DbContexts; // AppDbContext için
 using MovieStore.MovieStore.API.Mappings; // MapperConfig için
+using MovieStore.MovieStore.API.Cqrs.Validations;
+using MovieStore.MovieStore.API.Cqrs.Validations;
 using System.Reflection; // Assembly.GetExecutingAssembly() (kullanýlmýyorsa kaldýrýlabilir)
 // using Microsoft.AspNetCore.Authentication.JwtBearer; // JWT için gerekirse
 // using Microsoft.IdentityModel.Tokens; // JWT için gerekirse
@@ -42,6 +44,8 @@ builder.Services.AddFluentValidationAutoValidation();
 // Belirli validator sýnýflarýný içeren assembly'lerden validator'larý kaydeder.
 builder.Services.AddValidatorsFromAssemblyContaining<ActorValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<MovieValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<AssignActorToMovieRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<DirectorValidator>();
 // Alternatif olarak, eðer tüm validator'lar ayný assembly'de ise:
 // builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
