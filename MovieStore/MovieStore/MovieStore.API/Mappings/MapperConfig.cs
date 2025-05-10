@@ -12,20 +12,10 @@ namespace MovieStore.MovieStore.API.Mappings
             CreateMap<Movie, MovieResponse>();
 
             CreateMap<ActorRequest, Actor>();
-            //CreateMap<Actor, ActorResponse>();
+            CreateMap<Actor, ActorResponse>();
 
-
-
-
-     
-                CreateMap<Actor, ActorResponse>();
-            
-       
-
-
-        //CreateMap<Director, DirectorResponse>().ReverseMap();
-        //CreateMap<Director, DirectorRequest>().ReverseMap();
+            CreateMap<DirectorRequest, Director>(); 
+            CreateMap<Director, DirectorResponse>();
+        }
     }
-}
- 
 }

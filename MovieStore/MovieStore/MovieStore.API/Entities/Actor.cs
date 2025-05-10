@@ -24,21 +24,25 @@ namespace MovieStore.MovieStore.API.Entities
             builder.Property(a => a.SurName).IsRequired().HasMaxLength(50);
             builder.Property(a => a.DateOfBirth).IsRequired();
             builder.Property(a => a.IsActive).IsRequired();
+
+            
+            builder.HasIndex(a => new { a.Name, a.SurName })
+                   .IsUnique(false); 
+
             builder.HasMany(a => a.MovieActors)
-                .WithOne(ma => ma.Actor)
-                .HasForeignKey(ma => ma.ActorId)
-                .OnDelete(DeleteBehavior.Cascade);
+                   .WithOne(ma => ma.Actor)
+                   .HasForeignKey(ma => ma.ActorId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasMany(a => a.Movies)
-         .WithMany(m => m.Actors)
-         .UsingEntity<MovieActor>(
-             j => j.HasOne(ma => ma.Movie)
-                   .WithMany(m => m.MovieActors)
-                   .HasForeignKey(ma => ma.MovieId),
-             j => j.HasOne(ma => ma.Actor)
-                   .WithMany(a => a.MovieActors)
-                   .HasForeignKey(ma => ma.ActorId));
-
+                   .WithMany(m => m.Actors)
+                   .UsingEntity<MovieActor>(
+                       j => j.HasOne(ma => ma.Movie)
+                             .WithMany(m => m.MovieActors) 
+                             .HasForeignKey(ma => ma.MovieId),
+                       j => j.HasOne(ma => ma.Actor)
+                             .WithMany(a => a.MovieActors) 
+                             .HasForeignKey(ma => ma.ActorId));
         }
     }
 }
