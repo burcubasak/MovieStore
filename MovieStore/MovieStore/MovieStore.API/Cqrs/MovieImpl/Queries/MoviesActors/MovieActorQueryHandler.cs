@@ -1,10 +1,12 @@
-﻿using AutoMapper;
+﻿
+
+using AutoMapper;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MovieStore.MovieStore.API.DbContexts;
 using MovieStore.MovieStore.Schema;
 
-namespace MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.Movies
+namespace MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.MoviesActors
 {
     public class MovieActorQueryHandler :
       IRequestHandler<GetActiveActorsForMovieQuery, IEnumerable<ActorResponse>>,
@@ -28,7 +30,7 @@ namespace MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.Movies
             }
 
             var actors = await _context.MovieActors
-                .Where(ma => ma.MovieId == request.MovieId && ma.IsActive && ma.Actor.IsActive) 
+                .Where(ma => ma.MovieId == request.MovieId && ma.IsActive && ma.Actor.IsActive)
                 .Select(ma => ma.Actor)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
@@ -45,7 +47,7 @@ namespace MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.Movies
             }
 
             var movies = await _context.MovieActors
-                .Where(ma => ma.ActorId == request.ActorId && ma.IsActive && ma.Movie.IsActive) 
+                .Where(ma => ma.ActorId == request.ActorId && ma.IsActive && ma.Movie.IsActive)
                 .Select(ma => ma.Movie)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);

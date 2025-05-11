@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using MovieStore.MovieStore.API.Cqrs.MovieImpl.Commands.Movies;
 using MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.Movies;
 using static MovieStore.MovieStore.API.Cqrs.MovieImpl.Commands.MovieActors.MovieActorCommand;
+using MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.MoviesActors;
 
 namespace MovieStore.MovieStore.API.Controllers
 {

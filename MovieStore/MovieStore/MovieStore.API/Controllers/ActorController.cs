@@ -6,6 +6,7 @@ using MovieStore.MovieStore.Schema;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries;
+using MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.MoviesActors;
 
 namespace MovieStore.MovieStore.API.Controllers
 {
