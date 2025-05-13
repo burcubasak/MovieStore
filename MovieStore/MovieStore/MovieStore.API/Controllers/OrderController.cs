@@ -3,18 +3,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieStore.MovieStore.API.Cqrs.MovieImpl.Commands.Orders;
 using MovieStore.MovieStore.API.Cqrs.MovieImpl.Queries.Order;
-using MovieStore.MovieStore.Schema;                   
-using System;
-using System.Collections.Generic;
+using MovieStore.MovieStore.Schema;
 using System.Security.Claims; 
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MovieStore.MovieStore.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] 
+    [Authorize] // Bu controller'daki tüm endpoint'ler varsayılan olarak yetkilendirme gerektirir
     public class OrderController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -23,11 +19,10 @@ namespace MovieStore.MovieStore.API.Controllers
         {
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         }
-
         [HttpPost]
         [ProducesResponseType(typeof(OrderResponse), 201)]
         [ProducesResponseType(typeof(ValidationProblemDetails), 400)] 
-        [ProducesResponseType(401)]
+        [ProducesResponseType(401)] 
         [ProducesResponseType(404)] 
         public async Task<IActionResult> CreateOrder([FromBody] OrderCreateRequest request, CancellationToken cancellationToken)
         {
@@ -46,7 +41,8 @@ namespace MovieStore.MovieStore.API.Controllers
             {
                 var command = new CreateOrderCommand(userId, request);
                 var orderResponse = await _mediator.Send(command, cancellationToken);
-                return StatusCode(201, orderResponse);
+
+                return CreatedAtAction(nameof(GetOrderById), new { orderId = orderResponse.Id }, orderResponse);
             }
             catch (KeyNotFoundException ex) 
             {
@@ -57,6 +53,7 @@ namespace MovieStore.MovieStore.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [HttpGet("my-orders")]
         [ProducesResponseType(typeof(IEnumerable<OrderResponse>), 200)]
         [ProducesResponseType(401)]
         public async Task<ActionResult<IEnumerable<OrderResponse>>> GetMyOrders(CancellationToken cancellationToken)
@@ -71,7 +68,7 @@ namespace MovieStore.MovieStore.API.Controllers
             var orders = await _mediator.Send(query, cancellationToken);
             return Ok(orders);
         }
-        [HttpGet("{orderId:guid}", Name = "GetOrderById")] 
+        [HttpGet("{orderId:guid}", Name = "GetOrderById")]
         [ProducesResponseType(typeof(OrderResponse), 200)]
         [ProducesResponseType(401)] 
         [ProducesResponseType(404)] 
